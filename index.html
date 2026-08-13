@@ -165,7 +165,7 @@ const LOGIN_USER = "admin";
 // Varsayılan hash "degistir123" şifresine ait — MUTLAKA değiştirin.
 // Yeni şifrenizin hash'ini üretmek için: sayfanın en altındaki "Şifre hash'i üret"
 // bağlantısını kullanın (tarayıcı konsolunda otomatik yazdırır).
-const LOGIN_PASS_HASH = "fcb156ed25e7807d8334a17e97477db741a41d4f1d02badee79990d1b1c5b895";
+const LOGIN_PASS_HASH = "6082f37a033b70b51fc2faaff7670d3661a987a50e1faccd34030c749289d853";
 
 async function sha256Hex(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
