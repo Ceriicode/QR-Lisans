@@ -160,7 +160,17 @@
    AYARLAR — bunları kendinize göre değiştirin
    ========================================================= */
 const LOGIN_USER = "admin";
-const LOGIN_PASS = "degistir123"; // kod içinde saklanan basit erişim şifresi
+// Şifrenin kendisi değil, SHA-256 hash'i saklanıyor — bu sayede repo public olsa bile
+// kod içine bakan biri gerçek şifreyi doğrudan okuyamaz.
+// Varsayılan hash "degistir123" şifresine ait — MUTLAKA değiştirin.
+// Yeni şifrenizin hash'ini üretmek için: sayfanın en altındaki "Şifre hash'i üret"
+// bağlantısını kullanın (tarayıcı konsolunda otomatik yazdırır).
+const LOGIN_PASS_HASH = "fcb156ed25e7807d8334a17e97477db741a41d4f1d02badee79990d1b1c5b895";
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 /* =========================================================
    STATE
@@ -204,12 +214,27 @@ function renderLogin() {
         <input type="password" id="loginPass">
         <button class="btn btn-primary" id="loginBtn">Giriş yap</button>
         <div class="err-msg" id="loginErr">Kullanıcı adı veya şifre hatalı.</div>
+        <p class="hint" id="hashHelperToggle" style="cursor:pointer;text-decoration:underline">Yeni şifre için hash üret</p>
+        <div id="hashHelperBox" style="display:none">
+          <label>Yeni şifreniz</label>
+          <input type="text" id="hashHelperInput" placeholder="yeni-sifreniz">
+          <p class="hint">Aşağıdaki hash'i kopyalayıp koddaki <b>LOGIN_PASS_HASH</b> değerinin yerine yapıştırın:</p>
+          <textarea id="hashHelperOutput" readonly style="min-height:44px"></textarea>
+        </div>
       </div>
     </div>`;
+  document.getElementById('hashHelperToggle').onclick = () => {
+    const box = document.getElementById('hashHelperBox');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  };
+  document.getElementById('hashHelperInput').oninput = async (e) => {
+    document.getElementById('hashHelperOutput').value = e.target.value ? await sha256Hex(e.target.value) : '';
+  };
   document.getElementById('loginBtn').onclick = async () => {
     const u = document.getElementById('loginUser').value;
     const p = document.getElementById('loginPass').value;
-    if (u === LOGIN_USER && p === LOGIN_PASS) {
+    const pHash = await sha256Hex(p);
+    if (u === LOGIN_USER && pHash === LOGIN_PASS_HASH) {
       state.authed = true;
       if (state.token && state.gistId) {
         app.innerHTML = `<div class="center-screen"><div class="hint">Yükleniyor…</div></div>`;
