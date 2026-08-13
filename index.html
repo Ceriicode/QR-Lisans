@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lisans Paneli</title>
+<style>
+  :root{
+    --bg: #0d1117;
+    --panel: #151b23;
+    --panel-2: #1c2430;
+    --border: #2a3441;
+    --text: #e6edf3;
+    --text-dim: #8b98a5;
+    --accent: #5ee6c8;
+    --accent-dim: #2f7a6b;
+    --danger: #ff6b6b;
+    --danger-dim: #4a2323;
+    --warn: #f5b942;
+    --mono: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app { max-width: 720px; margin: 0 auto; padding: 20px 16px 80px; min-height: 100%; }
+
+  /* --- Login / Setup --- */
+  .center-screen {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .auth-card {
+    width: 100%; max-width: 340px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
+  }
+  .auth-mark {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #08110f; font-size: 18px; margin-bottom: 16px;
+  }
+  .auth-card h1 { font-size: 18px; margin: 0 0 4px; }
+  .auth-card p.sub { color: var(--text-dim); font-size: 13px; margin: 0 0 20px; }
+  label { display: block; font-size: 12px; color: var(--text-dim); margin: 14px 0 6px; }
+  input[type=text], input[type=password] {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 11px 12px; border-radius: 9px; font-size: 15px;
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  .btn {
+    width: 100%; padding: 12px; border-radius: 9px; border: none;
+    font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 18px;
+  }
+  .btn-primary { background: var(--accent); color: #08110f; }
+  .btn-primary:active { opacity: .8; }
+  .err-msg { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+  .hint { color: var(--text-dim); font-size: 12px; margin-top: 16px; line-height: 1.5; }
+
+  /* --- Top bar --- */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px; gap: 10px;
+  }
+  .topbar h1 { font-size: 19px; margin: 0; }
+  .topbar .count { color: var(--text-dim); font-size: 13px; }
+  .icon-btn {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim);
+    width: 34px; height: 34px; border-radius: 9px; font-size: 16px; cursor: pointer;
+  }
+
+  /* --- Toolbar --- */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .toolbar input[type=text] { flex: 1; }
+  .btn-add {
+    background: var(--accent); color: #08110f; border: none; border-radius: 9px;
+    padding: 0 16px; font-weight: 700; font-size: 20px; cursor: pointer;
+  }
+
+  /* --- Status --- */
+  .status-bar {
+    display: none; align-items: center; gap: 8px; font-size: 13px;
+    padding: 10px 12px; border-radius: 9px; margin-bottom: 14px;
+  }
+  .status-bar.show { display: flex; }
+  .status-saving { background: #2a2410; color: var(--warn); }
+  .status-ok { background: #12291f; color: var(--accent); }
+  .status-error { background: var(--danger-dim); color: var(--danger); }
+
+  /* --- License cards --- */
+  .lic-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 13px;
+    padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+  }
+  .lic-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .lic-name { font-size: 15px; font-weight: 600; }
+  .lic-meta { color: var(--text-dim); font-size: 12.5px; margin-top: 4px; font-family: var(--mono); }
+  .badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .badge-active { background: #12291f; color: var(--accent); }
+  .badge-inactive { background: var(--danger-dim); color: var(--danger); }
+  .lic-hwid {
+    font-family: var(--mono); font-size: 11px; color: var(--text-dim);
+    margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .empty-state {
+    text-align: center; color: var(--text-dim); padding: 60px 20px; font-size: 14px;
+  }
+
+  /* --- Modal (edit/add) --- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    display: none; align-items: flex-end; z-index: 50;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet {
+    width: 100%; background: var(--panel); border-radius: 18px 18px 0 0;
+    padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+    max-height: 88vh; overflow-y: auto;
+  }
+  .modal-sheet h2 { margin: 0 0 16px; font-size: 17px; }
+  .field-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border); }
+  .field-row:first-of-type { border-top: none; }
+  .field-row label { margin: 0; color: var(--text); font-size: 14px; }
+  .switch {
+    width: 44px; height: 26px; background: var(--panel-2); border-radius: 20px;
+    position: relative; cursor: pointer; border: 1px solid var(--border); flex-shrink: 0;
+  }
+  .switch.on { background: var(--accent-dim); }
+  .switch::after {
+    content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--text-dim); top: 2px; left: 2px; transition: .15s;
+  }
+  .switch.on::after { background: var(--accent); transform: translateX(18px); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+  .btn-secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger-outline {
+    background: transparent; color: var(--danger); border: 1px solid var(--danger-dim);
+    padding: 12px; border-radius: 9px; width: 100%; margin-top: 10px; font-size: 14px; cursor: pointer;
+  }
+  textarea {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 12px; border-radius: 9px; font-size: 13.5px;
+    font-family: var(--mono); resize: vertical; min-height: 60px; outline: none;
+  }
+  textarea:focus, input:focus { border-color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* =========================================================
+   AYARLAR — bunları kendinize göre değiştirin
+   ========================================================= */
+const LOGIN_USER = "admin";
+const LOGIN_PASS = "degistir123"; // kod içinde saklanan basit erişim şifresi
+
+/* =========================================================
+   STATE
+   ========================================================= */
+let state = {
+  authed: false,
+  token: localStorage.getItem('gh_token') || '',
+  gistId: localStorage.getItem('gh_gistid') || '',
+  filename: localStorage.getItem('gh_filename') || 'licenses.json',
+  licenses: [],
+  loading: false,
+  status: null, // {type:'saving'|'ok'|'error', msg:''}
+  editing: null, // index of license being edited, or 'new'
+  search: '',
+};
+
+const app = document.getElementById('app');
+
+/* =========================================================
+   RENDER ROUTER
+   ========================================================= */
+function render() {
+  if (!state.authed) return renderLogin();
+  if (!state.token || !state.gistId) return renderSetup();
+  return renderPanel();
+}
+
+/* =========================================================
+   LOGIN SCREEN
+   ========================================================= */
+function renderLogin() {
+  app.innerHTML = `
+    <div class="center-screen">
+      <div class="auth-card">
+        <div class="auth-mark">L</div>
+        <h1>Lisans Paneli</h1>
+        <p class="sub">Devam etmek için giriş yapın</p>
+        <label>Kullanıcı adı</label>
+        <input type="text" id="loginUser" autocapitalize="off" autocorrect="off">
+        <label>Şifre</label>
+        <input type="password" id="loginPass">
+        <button class="btn btn-primary" id="loginBtn">Giriş yap</button>
+        <div class="err-msg" id="loginErr">Kullanıcı adı veya şifre hatalı.</div>
+      </div>
+    </div>`;
+  document.getElementById('loginBtn').onclick = async () => {
+    const u = document.getElementById('loginUser').value;
+    const p = document.getElementById('loginPass').value;
+    if (u === LOGIN_USER && p === LOGIN_PASS) {
+      state.authed = true;
+      if (state.token && state.gistId) {
+        app.innerHTML = `<div class="center-screen"><div class="hint">Yükleniyor…</div></div>`;
+        try {
+          await loadLicenses();
+        } catch (e) {
+          state.token = ''; state.gistId = '';
+        }
+      }
+      render();
+    } else {
+      document.getElementById('loginErr').style.display = 'block';
+    }
+  };
+}
+
+/* =========================================================
+   SETUP SCREEN (GitHub token + gist id)
+   ========================================================= */
+function renderSetup() {
+  app.innerHTML = `
+    <div class="center-screen">
+      <div class="auth-card">
+        <div class="auth-mark">G</div>
+        <h1>GitHub Bağlantısı</h1>
+        <p class="sub">licenses.json'un bulunduğu Gist'e bağlanın</p>
+        <label>Personal Access Token</label>
+        <input type="password" id="setupToken" placeholder="ghp_...">
+        <label>Gist ID</label>
+        <input type="text" id="setupGistId" placeholder="örn. 8f2c1a...">
+        <label>Dosya adı</label>
+        <input type="text" id="setupFilename" value="${state.filename}">
+        <button class="btn btn-primary" id="setupBtn">Bağlan</button>
+        <div class="err-msg" id="setupErr"></div>
+        <p class="hint">Gist ID'yi, gist sayfanızın URL'sindeki son parçadan alabilirsiniz (gist.github.com/kullanici/<b>buradaki-id</b>). Token'ın "gist" yetkisine sahip olması yeterli.</p>
+      </div>
+    </div>`;
+  document.getElementById('setupBtn').onclick = async () => {
+    const token = document.getElementById('setupToken').value.trim();
+    const gistId = document.getElementById('setupGistId').value.trim();
+    const filename = document.getElementById('setupFilename').value.trim() || 'licenses.json';
+    const errEl = document.getElementById('setupErr');
+    errEl.style.display = 'none';
+    if (!token || !gistId) return;
+    try {
+      const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (!res.ok) throw new Error('Gist bulunamadı veya token geçersiz (' + res.status + ')');
+      const data = await res.json();
+      if (!data.files || !data.files[filename]) throw new Error(`"${filename}" bu gist içinde bulunamadı`);
+      state.token = token; state.gistId = gistId; state.filename = filename;
+      localStorage.setItem('gh_token', token);
+      localStorage.setItem('gh_gistid', gistId);
+      localStorage.setItem('gh_filename', filename);
+      await loadLicenses();
+      render();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.style.display = 'block';
+    }
+  };
+}
+
+/* =========================================================
+   GITHUB GIST I/O
+   ========================================================= */
+async function loadLicenses() {
+  state.loading = true;
+  const res = await fetch(`https://api.github.com/gists/${state.gistId}`, {
+    headers: { 'Authorization': `token ${state.token}`, 'Accept': 'application/vnd.github+json' }
+  });
+  const data = await res.json();
+  const file = data.files[state.filename];
+  let content = file.content;
+  if (file.truncated) {
+    const raw = await fetch(file.raw_url);
+    content = await raw.text();
+  }
+  state.licenses = JSON.parse(content);
+  state.loading = false;
+}
+
+async function saveLicenses() {
+  state.status = { type: 'saving', msg: 'Kaydediliyor…' };
+  render();
+  try {
+    const res = await fetch(`https://api.github.com/gists/${state.gistId}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `token ${state.token}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        files: { [state.filename]: { content: JSON.stringify(state.licenses, null, 2) } }
+      })
+    });
+    if (!res.ok) throw new Error('Kaydetme başarısız (' + res.status + ')');
+    state.status = { type: 'ok', msg: 'Kaydedildi ✓' };
+  } catch (e) {
+    state.status = { type: 'error', msg: e.message };
+  }
+  render();
+  setTimeout(() => { state.status = null; render(); }, 2500);
+}
+
+/* =========================================================
+   MAIN PANEL
+   ========================================================= */
+function renderPanel() {
+  const filtered = state.licenses.filter(l => {
+    const q = state.search.toLowerCase();
+    if (!q) return true;
+    return (l.customer || '').toLowerCase().includes(q) || (l.hwid || '').toLowerCase().includes(q);
+  });
+
+  app.innerHTML = `
+    <div class="topbar">
+      <div>
+        <h1>Lisanslar</h1>
+        <div class="count">${state.licenses.length} kayıt</div>
+      </div>
+      <button class="icon-btn" id="logoutBtn" title="Çıkış">⎋</button>
+    </div>
+
+    <div class="status-bar ${state.status ? 'show status-' + state.status.type : ''}">${state.status ? state.status.msg : ''}</div>
+
+    <div class="toolbar">
+      <input type="text" id="searchInput" placeholder="Müşteri veya HWID ara…" value="${escapeAttr(state.search)}">
+      <button class="btn-add" id="addBtn">+</button>
+    </div>
+
+    <div id="listWrap">
+      ${filtered.length === 0
+        ? `<div class="empty-state">${state.licenses.length === 0 ? 'Henüz lisans yok. "+" ile ekleyin.' : 'Sonuç bulunamadı.'}</div>`
+        : filtered.map((l, i) => renderCard(l, state.licenses.indexOf(l))).join('')}
+    </div>
+
+    ${renderModal()}
+  `;
+
+  document.getElementById('logoutBtn').onclick = () => {
+    state.authed = false; render();
+  };
+  document.getElementById('addBtn').onclick = () => { openEditor('new'); };
+  document.getElementById('searchInput').oninput = (e) => { state.search = e.target.value; render(); };
+  document.querySelectorAll('.lic-card').forEach(card => {
+    card.onclick = () => openEditor(parseInt(card.dataset.idx));
+  });
+
+  bindModalEvents();
+}
+
+function renderCard(l, idx) {
+  const hwidShort = (l.hwid || '').length > 28 ? l.hwid.slice(0, 28) + '…' : (l.hwid || '—');
+  return `
+    <div class="lic-card" data-idx="${idx}">
+      <div class="lic-top">
+        <div>
+          <div class="lic-name">${escapeHtml(l.customer || 'İsimsiz')}</div>
+          <div class="lic-meta">Son kullanma: ${escapeHtml(l.expireDate || '—')}</div>
+        </div>
+        <span class="badge ${l.isActive ? 'badge-active' : 'badge-inactive'}">${l.isActive ? 'Aktif' : 'Pasif'}</span>
+      </div>
+      <div class="lic-hwid">${escapeHtml(hwidShort)}</div>
+    </div>`;
+}
+
+/* =========================================================
+   EDIT / ADD MODAL
+   ========================================================= */
+function openEditor(idx) {
+  state.editing = idx;
+  render();
+}
+function closeEditor() {
+  state.editing = null;
+  render();
+}
+
+function renderModal() {
+  if (state.editing === null) return '';
+  const isNew = state.editing === 'new';
+  const l = isNew
+    ? { hwid: '', customer: '', expireDate: '', isActive: true, allowedVidPid: '' }
+    : state.licenses[state.editing];
+
+  return `
+    <div class="modal-overlay show" id="modalOverlay">
+      <div class="modal-sheet">
+        <h2>${isNew ? 'Yeni Lisans' : 'Lisansı Düzenle'}</h2>
+
+        <label>Müşteri</label>
+        <input type="text" id="f_customer" value="${escapeAttr(l.customer)}">
+
+        <label>HWID</label>
+        <textarea id="f_hwid">${escapeHtml(l.hwid)}</textarea>
+
+        <label>Son kullanma tarihi (YYYY-MM-DD)</label>
+        <input type="text" id="f_expireDate" value="${escapeAttr(l.expireDate)}" placeholder="2027-12-31">
+
+        <label>İzinli VID/PID</label>
+        <input type="text" id="f_vidpid" value="${escapeAttr(l.allowedVidPid)}" placeholder="VID_04CA&PID_7058">
+
+        <div class="field-row">
+          <label>Aktif</label>
+          <div class="switch ${l.isActive ? 'on' : ''}" id="f_active"></div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="cancelBtn" style="margin-top:0">Vazgeç</button>
+          <button class="btn btn-primary" id="saveEntryBtn" style="margin-top:0">Kaydet</button>
+        </div>
+        ${!isNew ? `<button class="btn-danger-outline" id="deleteBtn">Bu lisansı sil</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function bindModalEvents() {
+  const overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+
+  let activeState = true;
+  const l = state.editing === 'new' ? null : state.licenses[state.editing];
+  activeState = l ? !!l.isActive : true;
+  const switchEl = document.getElementById('f_active');
+  switchEl.classList.toggle('on', activeState);
+  switchEl.onclick = () => {
+    activeState = !activeState;
+    switchEl.classList.toggle('on', activeState);
+  };
+
+  overlay.onclick = (e) => { if (e.target === overlay) closeEditor(); };
+  document.getElementById('cancelBtn').onclick = closeEditor;
+
+  document.getElementById('saveEntryBtn').onclick = async () => {
+    const entry = {
+      hwid: document.getElementById('f_hwid').value.trim(),
+      customer: document.getElementById('f_customer').value.trim(),
+      expireDate: document.getElementById('f_expireDate').value.trim(),
+      isActive: activeState,
+      allowedVidPid: document.getElementById('f_vidpid').value.trim(),
+    };
+    if (state.editing === 'new') {
+      state.licenses.push(entry);
+    } else {
+      state.licenses[state.editing] = entry;
+    }
+    state.editing = null;
+    await saveLicenses();
+  };
+
+  const delBtn = document.getElementById('deleteBtn');
+  if (delBtn) {
+    delBtn.onclick = async () => {
+      if (!confirm('Bu lisansı silmek istediğinize emin misiniz?')) return;
+      state.licenses.splice(state.editing, 1);
+      state.editing = null;
+      await saveLicenses();
+    };
+  }
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+function escapeHtml(str) {
+  return (str || '').toString()
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function escapeAttr(str) {
+  return escapeHtml(str).replace(/"/g, '&quot;');
+}
+
+/* =========================================================
+   BOOT
+   ========================================================= */
+render();
+</script>
+</body>
+</html>
